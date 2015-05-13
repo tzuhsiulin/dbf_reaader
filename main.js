@@ -2,7 +2,7 @@ var iconv = require('iconv-lite');
 var fs = require('fs');
 var dbf = require('dbf');
 
-function DBFEncodingConverter() {
+function DBFReader() {
 	this.from = fs.openSync('./bb.dbf', 'r');
 	this.to = fs.openSync('./cc.dbf', 'w');
 	this.headerLength = 0;
@@ -13,7 +13,7 @@ function DBFEncodingConverter() {
 	this.fieldLength = [];
 }
 
-DBFEncodingConverter.prototype.readHeader = function() {
+DBFReader.prototype.readHeader = function() {
 	var buf;
 
 	// read header length
@@ -40,7 +40,7 @@ DBFEncodingConverter.prototype.readHeader = function() {
 	}
 };
 
-DBFEncodingConverter.prototype.readRecords = function() {
+DBFReader.prototype.readRecords = function() {
 	var buf;
 	var startPosition = this.headerLength + 1;
 	var records = [];
@@ -98,56 +98,14 @@ DBFEncodingConverter.prototype.readRecords = function() {
 	return records;
 };
 
-DBFEncodingConverter.prototype.parse = function() {
+DBFReader.prototype.parse = function() {
 	this.readHeader();
-	var records = this.readRecords();
-
-	if (records && records.length > 0) {
-		this.writeHeader(records);
-		this.writeBody(records);
-	}
-};
-
-DBFEncodingConverter.prototype.writeHeader = function(records) {
-	var buf = new Buffer(this.headerLength);
-
-	fs.readSync(this.from, buf, 0, this.headerLength, 0);
-	fs.writeSync(this.to, buf, 0, buf.length, 0);
-};
-
-DBFEncodingConverter.prototype.writeBody = function(records) {
-	var buf, position, j;
-	var start = this.headerLength+1;
-
-	for (var i = 0; i < records.length; i++) {
-		var buf = new Buffer(this.numberOfRecordByte);
-		buf.fill(0x20);
-
-		position = j = 0;
-		for (var key in records[i]) {
-			if (typeof records[i][key] == 'number') {
-				var str = records[i][key].toString();
-				for (var l = 0; l < str.length; l++) {
-					buf.write(str[l], position+l, 1);
-				}
-			}
-			else if (typeof records[i][key] == 'string') {
-				var strbuf = new Buffer(records[i][key]);
-				buf.write(records[i][key], position, strbuf.length);
-			}
-
-			position += this.fieldLength[j];
-			j++;
-		}
-
-		fs.writeSync(this.to, buf, 0, buf.length, start+(i*this.numberOfRecordByte));
-	}
+	return this.readRecords();
 };
 
 (function() {
-	var converter = new DBFEncodingConverter();
-	converter.parse();
-	// console.log(records);
+	var converter = new DBFReader();
+	console.log(converter.parse());
 })();
 
 
